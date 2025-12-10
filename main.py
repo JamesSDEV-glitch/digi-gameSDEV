@@ -2,7 +2,7 @@ import random
 import json
 
 # Globals
-global inventory, playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict
+global inventory, playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict, rickFound
 inventory = []
 playerSTARTHP = 50
 quests = []
@@ -11,7 +11,7 @@ activeQuest = None
 statusVisited = 0
 currentItem = None
 currentLocation = None
-
+rickFound = False
 # PLAYER
 class Player:
     def __init__(self, name, hp, strength, intel, luck, skill, startHP, level, xp, armorClass, age, trait, gender):
@@ -334,7 +334,7 @@ enemies = [ranger, megaZombie, mutatedZombie, floaters, mutScorpion, usSoldier, 
 
 # CREATE ITEMS
 def createItems():
-    global milk, beef, coke, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, combatKnife, gatlingLaser
+    global milk, beef, coke, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, combatKnife, gatlingLaser, rickEntrySlip, xTExoArmour, xSExoArmour, redTownMap
     global itemList, lowLuckItems, medLuckItems, highLuckItems
 
     milk = items("Milk Carton", 15, 0, "health", "A milk carton, dated 2064.", None, 0, 0)
@@ -351,15 +351,22 @@ def createItems():
     combatArmour = items("M-75 Combat Armour", 0, 0, "armour", "M-75 Combat Armour. Certain factions still use this armour, due to its reliability.", None, 0, 25)
     xTExoArmour  = items("X-T65 Exo-Armour", 0, 0, "armour", "X-T65 Exo-Armour. The most basic X-issue Exo-Armours. Issued to paratroopers for the 2065 war.", None, 0, 60)
     xSExoArmour = items("X-S91 Exo-Armour", 0, 0, "armour", "X-S91 Exo-Armour. Currently used by the remaining US army.", None, 0, 150)
+    redTownMap = items("Redtown map", 0, 0, "armor", "This map details the forgotten location of Redtown.", None, 0, 0)
+    rickEntrySlip = items("Rick Crass entry slip", 0, 0, "special", "An entry slip, signed by someone called Rick Crass.", f"NAME: RICK CRASS\n AGE: 32\n STATE OF ORIGIN: NEVADE\n", 0, 0)
     itemList = [milk, beef, cokeTract, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xTExoArmour, xSExoArmour]
-
+    
     lowLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, combatKnife, leatherArmour]
-    medLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, assaultRifle, combatKnife, leatherArmour, combatArmour, xTExoArmour]
-    highLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xSExoArmour]
-
+    medLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, assaultRifle, combatKnife, leatherArmour, combatArmour, xTExoArmour, rickEntrySlip, redTownMap]
+    highLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xSExoArmour, rickEntrySlip, redTownMap]
+def checkRickItem(itemFound):
+    if itemFound.name == rickEntrySlip.name:
+        print("Someone new has arrived...")
+        rickFound = True
+    else:
+        return
 # CREATE QUESTS
 def createQuests():
-    global quests, npcQuests, usArmyQONE, usArmyQTWO, redRebelQONE, redRebelQTWO
+    global quests, npcQuests, usArmyQONE, usArmyQTWO, redRebelQONE, redRebelQTWO, redTownMapQ
     killMUZombsQuest = quest("Kill Mutated Zombies", {"target": "Mutated Zombie", "count": 3}, "Kill 3 Mutated Zombies.", "kill", 600)
     findFFQuest = quest("Find a Revolver", ".45 Revolver", "Find a .45 revolver.", "find", 600)
     findCShotgunQuest = quest("Find a Shotgun", "M-52 Combat Shotgun", "Find a Combat Shotgun.", "find", 600)
@@ -374,6 +381,7 @@ def createQuests():
     usArmyQTWO = quest("US Army 2. Find some Exo-Armor.", "X-T65 Exo-Armour", "Find a set of X-T65 Exo-Armour.", "find", 1700)
     redRebelQONE = quest("Redtown Rebels 1. Kill U.S. Soldiers.", {"target": "U.S. Soldier", "count": 7}, "Kill U.S. Soldiers to aid the Redtown Rebels.", "kill", 1500)
     redRebelQTWO = quest("Redtown Rebels 2. Find some combat armor.", "M-75 Combat Armour", "Find a set of M-75 Combat Armour.", "find", 1500)
+    redTownMapQ = quest("Redtown location", "Redtown map", "Find the map of Redtown", "find", 700)
     quests = [gettingStartedQuest]
     npcQuests.extend([killMegaZombieQuest, findCokeQuest, killMutScorpionQuest, killFloatersQuest, killMUZombsQuest, findFFQuest, findCShotgunQuest, killRangersQuest, findNukeLauncherQuest])
     
@@ -471,9 +479,8 @@ def combat(enemy=None):
             player.xp += 500
             player.checkLevelUp()
             return
-
         chosenEnemy.enemyAttack(player)
-
+        
         if player.hp <= 0:
             print("YOU DIED!")
             return
@@ -533,6 +540,7 @@ def scavenge():
     else:
         print(f"YOU FOUND A {itemFound.name}")
         player.inventoryHandler(itemFound)
+    checkRickItem(itemFound)
 class perkTraitDesc:
     def __init__(self, name, desc):
         self.name = name
@@ -645,7 +653,54 @@ def loadGame():
             break
 
     print("Game loaded.")
-    
+#RICK COMPANION
+rickCompanion = Player("Rick Crass", 150, 7, 6, 8, 8, 150, 3, 0, 0, 32, None, "M")
+def rickDialogue():
+    nodes = {
+        "start": DialogueNode(
+            id="start",
+            text=f"Rick Crass: What do you want?",
+            choices=[
+                DialogueChoice("Tell me about Redtown Rebels.", nextNode="red_town_info"),
+                DialogueChoice("See you later.", nextNode="end"),
+            ]
+        ),
+        "red_town_info": DialogueNode(
+            id="red_town_info",
+            text=f"Rick Crass: The Redtown Rebels are a rebel group, based in South Territory Montana.\n They're named after a pre-war baseball team, the Redtown Rickets.\n Not sure where Redtown is now, I think it was flattened.\n",
+            choices=[
+                DialogueChoice("Do you think we can find it?", nextNode="redtown_map_q"),
+            ]
+        ),
+        "redtown_map_q": DialogueNode(
+            id="redtown_map_q",
+            text=f"Rick Crass: You think so? There might be a map lying around somewhere.",
+            choices=[
+                DialogueChoice("Alright, I'll find it.", nextNode="acceptRedtownFindQ", action=lambda: quests.append(redTownMapQ)),
+                DialogueChoice("Sorry, I can't do it.", nextNode="rejectRedtownFindQ") ,
+            ]
+        ),
+        "acceptRedtownFindQ": DialogueNode(
+            id="acceptRedtownFindQ",
+            text=f"Rick Crass: Alright.\n QUEST ADDED: {redTownMapQ.name}",
+            choices=[
+                DialogueChoice("I'll get on it.", nextNode="start"),
+            ]
+        ),
+        "rejectRedtownFindQ": DialogueNode(
+            id="rejectRedtownFindQ",
+            text=f"Rick Crass: Oh, ok.",
+            choices=[
+                DialogueChoice("Ok.", nextNode="start"),
+            ]
+        ),
+        "end": DialogueNode(
+            id="end",
+            text="Rick Crass: Bye.\n You part ways.",
+            choices=[]
+        ),
+    }
+    runDialogue(nodes, "start")
 # SETUP
 createItems()
 createQuests()
@@ -664,7 +719,7 @@ match choice:
 run = True
 while run:
     print("\n--- CRPG ---")
-    print(f" 1. Move\n 2. Show Inventory\n 3. Use an Item\n 4. Quests\n 5. Janas. Almanac\n 6. Scavenge\n 7. Standalone Combat\n 8. Meet Someone \n 9. Factions\n 10. Save Game")
+    print(f" 1. Move\n 2. Show Inventory\n 3. Use an Item\n 4. Quests\n 5. Janas. Almanac\n 6. Scavenge\n 7. Standalone Combat\n 8. Meet Someone \n 9. Factions\n 10. Save Game\n 11. Rick Crass")
     choice = input("> ")
     if choice == "1":
         move()
@@ -686,6 +741,8 @@ while run:
         chooseFaction()
     elif choice == "10":
         saveGame()
+    elif choice == "11":
+        rickDialogue()
     elif choice == "four leaf clover":
         player.luck += 500
         print("You feel lucky...")
@@ -704,3 +761,4 @@ while run:
         player.skill = 10
         player.luck = 10
         player.level = 99
+
