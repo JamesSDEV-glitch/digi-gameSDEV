@@ -1,8 +1,8 @@
 import random
 import json
-
+import time
 # Globals
-global inventory, playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict, rickFound
+global inventory, playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict, rickFound, timeScale
 inventory = []
 playerSTARTHP = 50
 quests = []
@@ -12,9 +12,10 @@ statusVisited = 0
 currentItem = None
 currentLocation = None
 rickFound = False
+timeScale = 20
 # PLAYER
 class Player:
-    def __init__(self, name, hp, strength, intel, luck, skill, startHP, level, xp, armorClass, age, trait, gender):
+    def __init__(self, name, hp, strength, intel, luck, skill, startHP, level, xp, armorClass, age, trait, gender, money, inventory):
         self.name = name
         self.hp = hp
         self.strength = strength
@@ -28,6 +29,8 @@ class Player:
         self.age = age
         self.trait = trait
         self.gender = gender
+        self.money = money
+        self.inventory = inventory if inventory else []
     def rollAttack(self, enemy):
         global currentItem
 
@@ -60,7 +63,7 @@ class Player:
         print(f"ENEMY HEALTH: {enemy.hp}")
 
     def inventoryHandler(self, item):
-        inventory.append(item)
+        player.inventory.append(item)
         triggerEvent("find_item", item.name)
 
     def printInventory(self, item):
@@ -75,17 +78,17 @@ class Player:
 
     def useItem(self):
         global currentItem
-        if not inventory:
+        if not player.inventory:
             print("EMPTY")
             return
 
         print("Which item do you want to use?")
-        for index, i in enumerate(inventory):
+        for index, i in enumerate(player.inventory):
             print(f"{index+1}. {i.name}")
 
         try:
             choice = int(input("> ")) - 1
-            item = inventory[choice]  # don't pop, keep in inventory
+            item = player.iinventory[choice]  # don't pop, keep in inventory
 
             if item.tag == "special":
                 print(item.addInfo)
@@ -144,6 +147,7 @@ class Player:
             print(f"LEVEL: {self.level}")
             print(f"XP: {self.xp}")
             print(f"TRAIT: {self.trait}")
+            print(f"MONEY: {self.money}")
             
 # ENEMY
 class Enemy:
@@ -175,7 +179,7 @@ class Enemy:
 
 # ITEMS
 class items:
-    def __init__(self, name, healthBoost, dH, tag, desc, addInfo, dL, armorPoints):
+    def __init__(self, name, healthBoost, dH, tag, desc, addInfo, dL, armorPoints, cost):
         self.name = name
         self.healthBoost = healthBoost
         self.dH = dH
@@ -184,6 +188,7 @@ class items:
         self.addInfo = addInfo
         self.dL = dL
         self.armorPoints = armorPoints
+        self.cost = cost
 # LOCATIONS
 class Location:
     def __init__(self, name, description, connections=None, encounters=None):
@@ -313,7 +318,7 @@ usSoldier = Enemy("U.S. Soldier", 100, 30, 40, 100)
 rebel = Enemy("Rowdy Rebel", 115, 20, 30, 115)
 krakerJackGanger = Enemy("KrakerJack Gangster", 110, 10, 15, 110)
 ntmGanger = Enemy("North Territory Montana Ganger", 110, 10, 15, 110)
-player = Player("Player", 50, 4, 4, 4, 4, playerSTARTHP, 1, 0, 0, None, None, None)
+player = Player("Player", 50, 4, 4, 4, 4, playerSTARTHP, 1, 0, 0, None, None, None, 0, [])
 def makePlayerDict():
     return {
         "name": player.name,
@@ -328,37 +333,37 @@ def makePlayerDict():
         "armor-class": player.armorClass,
         "age": player.age,
         "gender": player.gender,
-        "trait": player.trait
+        "trait": player.trait,
+        "money": player.money
     }
 enemies = [ranger, megaZombie, mutatedZombie, floaters, mutScorpion, usSoldier, rebel, krakerJackGanger, ntmGanger]
 
 # CREATE ITEMS
 def createItems():
-    global milk, beef, coke, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, combatKnife, gatlingLaser, rickEntrySlip, xTExoArmour, xSExoArmour, redTownMap
+    global milk, beef, coke, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, combatKnife, gatlingLaser, rickEntrySlip, xTExoArmour, xSExoArmour, redTownMap, leatherArmour, combatArmour
     global itemList, lowLuckItems, medLuckItems, highLuckItems
-
-    milk = items("Milk Carton", 15, 0, "health", "A milk carton, dated 2064.", None, 0, 0)
-    beef = items("Beef", 20, 0, "health", "Beef of a barsrot.", None, 0, 0)
-    cokeTract = items("Tract Coke", 10, 0, "health", "A popular pre-apocalyptic soda.", None, 0, 0)
-    fortyfiveRevolver = items(".45 Revolver", 0, 16, "weapon", "A revolver that uses .45 bullets.", None, 10, 0)
-    shotgunCombat = items("M-52 Combat Shotgun", 0, 49, "weapon", "An automatic burst M-52 shotgun, made by Janas Weapons for the US army.", None, 34, 0)
-    notes1 = items("Mysterious Note 1", 0, 0, "special", "A note.", "These people. They're driving me insane...", 0, 0)
-    nukeLauncher = items("Nuke Launcher", 30, 480, "weapon", "A nuke launcher. Does large amounts of damage.", None, 300, 0)
-    assaultRifle = items("M-65 Assault Rifle", 0, 50, "weapon", "A M-65 pre-war assault rifle, issued to troops fighting in the 2065 war.", None, 20, 0)
-    combatKnife = items("Combat Knife", 0, 10, "weapon", "A serrated-blade with a compass built into the hilt.", None, 7, 0)
-    gatlingLaser = items("Gatling Laser", 0, 150, "weapon", "A gatling laser. The last weapon produced for the US army. This one is modified, having a faster spin-up.", None, 70, 0)
-    leatherArmour = items("Leather Armour", 0, 0, "armour", "A patched-up leather jacket and pants. Has mediocre damage resistance.", None, 0, 15)
-    combatArmour = items("M-75 Combat Armour", 0, 0, "armour", "M-75 Combat Armour. Certain factions still use this armour, due to its reliability.", None, 0, 25)
-    xTExoArmour  = items("X-T65 Exo-Armour", 0, 0, "armour", "X-T65 Exo-Armour. The most basic X-issue Exo-Armours. Issued to paratroopers for the 2065 war.", None, 0, 60)
-    xSExoArmour = items("X-S91 Exo-Armour", 0, 0, "armour", "X-S91 Exo-Armour. Currently used by the remaining US army.", None, 0, 150)
-    redTownMap = items("Redtown map", 0, 0, "armor", "This map details the forgotten location of Redtown.", None, 0, 0)
-    rickEntrySlip = items("Rick Crass entry slip", 0, 0, "special", "An entry slip, signed by someone called Rick Crass.", f"NAME: RICK CRASS\n AGE: 32\n STATE OF ORIGIN: NEVADE\n", 0, 0)
-    itemList = [milk, beef, cokeTract, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xTExoArmour, xSExoArmour]
-    
+    milk = items("Milk Carton", 15, 0, "health", "A milk carton, dated 2064.", None, 0, 0, 5)
+    beef = items("Beef", 20, 0, "health", "Beef of a barsrot.", None, 0, 0, 10)
+    cokeTract = items("Tract Coke", 10, 0, "health", "A popular pre-apocalyptic soda.", None, 0, 0, 5)
+    fortyfiveRevolver = items(".45 Revolver", 0, 16, "weapon", "A revolver that uses .45 bullets.", None, 10, 0, 35)
+    shotgunCombat = items("M-52 Combat Shotgun", 0, 49, "weapon", "An automatic burst M-52 shotgun, made by Janas Weapons for the US army.", None, 34, 0, 250)
+    notes1 = items("Mysterious Note 1", 0, 0, "special", "A note.", "These people. They're driving me insane...", 0, 0, 0)
+    nukeLauncher = items("Nuke Launcher", 30, 480, "weapon", "A nuke launcher. Does large amounts of damage.", None, 300, 0, 999)
+    assaultRifle = items("M-65 Assault Rifle", 0, 50, "weapon", "A M-65 pre-war assault rifle, issued to troops fighting in the 2065 war.", None, 20, 0, 350)
+    combatKnife = items("Combat Knife", 0, 10, "weapon", "A serrated-blade with a compass built into the hilt.", None, 7, 0, 25)
+    gatlingLaser = items("Gatling Laser", 0, 150, "weapon", "A gatling laser. The last weapon produced for the US army. This one is modified, having a faster spin-up.", None, 70, 0, 1024)
+    leatherArmour = items("Leather Armour", 0, 0, "armour", "A patched-up leather jacket and pants. Has mediocre damage resistance.", None, 0, 15, 45)
+    combatArmour = items("M-75 Combat Armour", 0, 0, "armour", "M-75 Combat Armour. Certain factions still use this armour, due to its reliability.", None, 0, 25, 85)
+    xTExoArmour  = items("X-T65 Exo-Armour", 0, 0, "armour", "X-T65 Exo-Armour. The most basic X-issue Exo-Armours. Issued to paratroopers for the 2065 war.", None, 0, 60, 450)
+    xSExoArmour = items("X-S91 Exo-Armour", 0, 0, "armour", "X-S91 Exo-Armour. Currently used by the remaining US army.", None, 0, 150, 2025)
+    redTownMap = items("Redtown map", 0, 0, "special", "A dusty old map.", "This map details the forgotten location of Redtown.", 0, 0, 0)
+    rickEntrySlip = items("Rick Crass entry slip", 0, 0, "special", "An entry slip, signed by someone called Rick Crass.", f"NAME: RICK CRASS\n AGE: 32\n STATE OF ORIGIN: NEVADE\n", 0, 0, 0)
+    itemList = [milk, beef, cokeTract, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xTExoArmour, xSExoArmour, rickEntrySlip, redTownMap]
     lowLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, combatKnife, leatherArmour]
-    medLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, assaultRifle, combatKnife, leatherArmour, combatArmour, xTExoArmour, rickEntrySlip, redTownMap]
-    highLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xSExoArmour, rickEntrySlip, redTownMap]
+    medLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, assaultRifle, combatKnife, leatherArmour, combatArmour, xTExoArmour, rickEntrySlip]
+    highLuckItems = [milk, cokeTract, beef, fortyfiveRevolver, shotgunCombat, notes1, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xSExoArmour, rickEntrySlip]
 def checkRickItem(itemFound):
+    global rickFound
     if itemFound.name == rickEntrySlip.name:
         print("Someone new has arrived...")
         rickFound = True
@@ -396,7 +401,6 @@ def createLocations():
     jerbankLocation.connections = {"south": shiftyShinsLocation}
     eastMontanaArmyBaseLocation.connections = {"west": shiftyShinsLocation}
     shiftyShinsStore.connections = {"exit": shiftyShinsLocation}
-
 # QUEST EVENT HANDLER
 def triggerEvent(event_type, data=None):
     for q in quests:
@@ -478,6 +482,7 @@ def combat(enemy=None):
             triggerEvent("kill", chosenEnemy.name)
             player.xp += 500
             player.checkLevelUp()
+            player.money += random.randint(50, 1000)
             return
         chosenEnemy.enemyAttack(player)
         
@@ -517,10 +522,10 @@ def mainMenuInventoryShow():
         print(f"CURRENT ITEM: {currentItem.name}")
     else:
         print("NO ITEM EQUIPPED.")
-    if not inventory:
+    if not player.inventory:
         print("EMPTY")
         return
-    for i in inventory:
+    for i in player.inventory:
         player.printInventory(i)
         print("-----------------")
 
@@ -594,9 +599,10 @@ def createCharacter():
 def saveGame():
     saveData = {
         "player": makePlayerDict(),
-        "inventory": [item.name for item in inventory],
+        "inventory": [item.name for item in player.inventory],
         "quests": [{"name": q.name, "completed": q.completed} for q in quests],
-        "location": currentLocation.name
+        "location": currentLocation.name,
+        "rick_active": rickFound
     }
 
     with open("save.json", "w") as f:
@@ -606,8 +612,7 @@ def saveGame():
 
 
 def loadGame():
-    global inventory, currentLocation, quests
-
+    global inventory, currentLocation, quests, rickFound
     try:
         with open("save.json", "r") as f:
             data = json.load(f)
@@ -631,13 +636,13 @@ def loadGame():
     player.age = p["age"]
     player.gender = p["gender"]
     player.trait = p["trait"]
-
+    player.money = p["money"]
     # LOAD INVENTORY
     inventory.clear()
     for name in data["inventory"]:
         for item in itemList:
             if item.name == name:
-                inventory.append(item)
+                player.inventory.append(item)
 
     # LOAD QUESTS COMPLETION
     for savedQ in data["quests"]:
@@ -651,23 +656,25 @@ def loadGame():
         if loc.name == locName:
             currentLocation = loc
             break
-
+    rickFound = data["rick_active"]
     print("Game loaded.")
 #RICK COMPANION
-rickCompanion = Player("Rick Crass", 150, 7, 6, 8, 8, 150, 3, 0, 0, 32, None, "M")
+rickCompanion = Player("Rick Crass", 150, 7, 6, 8, 8, 150, 3, 0, 0, 32, None, "M", 0, [])
 def rickDialogue():
     nodes = {
         "start": DialogueNode(
             id="start",
-            text=f"Rick Crass: What do you want?",
+            text=f"Rick Crass: Hey, {player.name}.",
             choices=[
                 DialogueChoice("Tell me about Redtown Rebels.", nextNode="red_town_info"),
-                DialogueChoice("See you later.", nextNode="end"),
+                DialogueChoice("Tell me about South Territory Montana.", nextNode="south_territory_montana_info"),
+                DialogueChoice("Tell me about the US army.", nextNode="us_army_info"),
+                DialogueChoice("See you later.", nextNode="end")
             ]
         ),
         "red_town_info": DialogueNode(
             id="red_town_info",
-            text=f"Rick Crass: The Redtown Rebels are a rebel group, based in South Territory Montana.\n They're named after a pre-war baseball team, the Redtown Rickets.\n Not sure where Redtown is now, I think it was flattened.\n",
+            text=f"Rick Crass: The Redtown Rebels are a rebel group, based in South Territory Montana.\nThey're named after a pre-war baseball team, the Redtown Rickets.\nNot sure where Redtown is now, I think it was flattened.\n",
             choices=[
                 DialogueChoice("Do you think we can find it?", nextNode="redtown_map_q"),
             ]
@@ -676,39 +683,92 @@ def rickDialogue():
             id="redtown_map_q",
             text=f"Rick Crass: You think so? There might be a map lying around somewhere.",
             choices=[
-                DialogueChoice("Alright, I'll find it.", nextNode="acceptRedtownFindQ", action=lambda: quests.append(redTownMapQ)),
-                DialogueChoice("Sorry, I can't do it.", nextNode="rejectRedtownFindQ") ,
+                DialogueChoice("Alright, I'll find it.", nextNode="accept_redtown_find_q", action=lambda: quests.append(redTownMapQ)),
+                DialogueChoice("Sorry, I can't do it.", nextNode="reject_redtown_find_q"),
             ]
         ),
-        "acceptRedtownFindQ": DialogueNode(
-            id="acceptRedtownFindQ",
+        "accept_redtown_find_q": DialogueNode(
+            id="accept_redtown_find_q",
             text=f"Rick Crass: Alright.\n QUEST ADDED: {redTownMapQ.name}",
             choices=[
-                DialogueChoice("I'll get on it.", nextNode="start"),
+                DialogueChoice("I'll get on it.", nextNode="start", action=lambda: medLuckItems.append(redTownMap) and highLuckItems.append(redTownMap)),
             ]
         ),
-        "rejectRedtownFindQ": DialogueNode(
-            id="rejectRedtownFindQ",
+        "reject_redtown_find_q": DialogueNode(
+            id="reject_redtown_find_q",
             text=f"Rick Crass: Oh, ok.",
             choices=[
                 DialogueChoice("Ok.", nextNode="start"),
             ]
         ),
+        "south_territory_montana_info": DialogueNode(
+            id="south_territory_montana_info",
+            text=f"Rick Crass: Down south of Montana used to be connected to the north. Then came along President Dunlop and messed it all up.",
+            choices=[
+                DialogueChoice("Tell me about President Dunlop.", nextNode="pres_dunlop_info"),
+                DialogueChoice("Tell me more about South Territory Montana.", nextNode="more_stm_info"),
+                DialogueChoice("Let's talk about something else.", nextNode="start")
+            ]
+        ),
+        "more_stm_info": DialogueNode(
+            id="more_stm_info",
+            text=f"Rick Crass: STM is plagued  with violence.\nMainly between the Redtown Rebels and The U.S. Army.\nI don't think anything will get better down here.",
+            choices=[
+                DialogueChoice("Tell me about the Redtown Rebels.", nextNode="red_town_info"),
+                DialogueChoice("Tell me about the U.S. Army.", nextNode="us_army_info"),
+                DialogueChoice("Let's talk about something else.", nextNode="start")
+            ]
+        ),
+        "pres_dunlop_info": DialogueNode(
+            id="pres_dunlop_info",
+            text=f"Rick Crass: President Dunlop is a crazy tyrant.\nHe has an insane fixation on controlling everything and anything that breathes or walks.\nOf course, to nurture the failing american dream,\nwhich everyone now-adays is looking for.",
+            choices=[
+                DialogueChoice("Let's talk about something else.", nextNode="start")
+            ]
+        ),
+        "us_army_info": DialogueNode(
+            id="us_army_info",
+            text=f"Rick Crass: The U.S. Army is hellbent on controlling everything that it percieves to be dangerous.\nJust like any rebel groups that just want to stop the tyranny.",
+            choices=[
+                DialogueChoice("Tell me about President Dunlop.", nextNode="pres_dunlop_info"),
+                DialogueChoice("Let's talk about something else.", nextNode="start")
+            ]
+        ),
         "end": DialogueNode(
             id="end",
-            text="Rick Crass: Bye.\n You part ways.",
+            text="Rick Crass: Bye.\nYou part ways.",
             choices=[]
         ),
     }
     runDialogue(nodes, "start")
+
 # SETUP
 createItems()
 createQuests()
 createLocations()
 createTraitsPerks()
 createFactions()
+class shop:
+    def __init__(self, items):
+        self.items = items if items else []
+mainShop = shop([fortyfiveRevolver, shotgunCombat, nukeLauncher, assaultRifle, gatlingLaser, combatKnife, leatherArmour, combatArmour, xTExoArmour, xSExoArmour])
+def shopMenu():
+    print(f"SHOP\n")
+    for index, item in enumerate(mainShop.items):
+        print(f"\n{index+1}. NAME: {item.name}\nHP BOOST: {item.healthBoost}\nDL: {item.dL}, DH: {item.dH}\nARMOR CLASS: {item.armorPoints}\nDESC: {item.desc}\nCOST: ${item.cost}\n")
+    print(f"PLAYER MONEY: ${player.money}")
+    choice = int(input("ITEM NUM: ")) - 1
+    chosenItem = mainShop.items[choice]
+    if player.money >= chosenItem.cost:
+        print(f"{chosenItem.name} BOUGHT FOR ${chosenItem.cost}.\nPLAYER MONEY: ${player.money-chosenItem.cost}.")
+        player.money -= chosenItem.cost
+        player.inventoryHandler(chosenItem)
+        return
+    if chosenItem.cost > player.money:
+        print(f"PLAYER NEEDS MORE MONEY. CURRENT MONEY: ${player.money}")
+        return
 currentLocation = shiftyShinsLocation
-print(f"Welcome ot Digi: A Dystopian Post-Nuclear Role-playing Game.\n(n)ew game, (l)oad game\n")
+print(f"Welcome to DIGI: A Dystopian Post-Nuclear Role-playing Game.\n(n)ew game, (l)oad game\n")
 choice = input("> ")
 match choice:
     case "n":
@@ -719,7 +779,7 @@ match choice:
 run = True
 while run:
     print("\n--- CRPG ---")
-    print(f" 1. Move\n 2. Show Inventory\n 3. Use an Item\n 4. Quests\n 5. Janas. Almanac\n 6. Scavenge\n 7. Standalone Combat\n 8. Meet Someone \n 9. Factions\n 10. Save Game\n 11. Rick Crass")
+    print(f" 1. Move\n 2. Show Inventory\n 3. Use an Item\n 4. Quests\n 5. Janas. Almanac\n 6. Scavenge\n 7. Standalone Combat\n 8. Meet Someone \n 9. Factions\n 10. Save Game\n 11. Rick Crass\n 12. Shop")
     choice = input("> ")
     if choice == "1":
         move()
@@ -742,7 +802,12 @@ while run:
     elif choice == "10":
         saveGame()
     elif choice == "11":
-        rickDialogue()
+        if rickFound == True:
+            rickDialogue()
+        else:
+            print("Unavailable option.")
+    elif choice == "12":
+        shopMenu()
     elif choice == "four leaf clover":
         player.luck += 500
         print("You feel lucky...")
@@ -756,9 +821,27 @@ while run:
             print(f"ARMOR POINTS: {item.armorPoints}")
             print()
     elif choice == "max verstapen":
-        player.strength = 10
-        player.intel = 10
-        player.skill = 10
-        player.luck = 10
-        player.level = 99
-
+        for l in range(99):
+            player.xp = 3500
+            player.checkLevelUp()
+    elif choice == "rickCrassACTIVE":
+        itemFound = rickEntrySlip
+        checkRickItem(itemFound)
+    elif choice == "medItems":
+        for item in medLuckItems:
+            print(f"NAME: {item.name}")
+            print(f"DH: {item.dH} DL: {item.dL}")
+            print(f"HP BOOST: {item.healthBoost}")
+            print(f"ARMOR POINTS: {item.armorPoints}")
+            print()
+    elif choice == "highItems":
+        for item in highLuckItems:
+            print(f"NAME: {item.name}")
+            print(f"DH: {item.dH} DL: {item.dL}")
+            print(f"HP BOOST: {item.healthBoost}")
+            print(f"ARMOR POINTS: {item.armorPoints}")
+            print()
+    elif choice == "rickCheck":
+        print(rickFound)
+    elif choice == "playerADDMONEY":
+        player.money += 500000000000000000000000000
