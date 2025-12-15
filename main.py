@@ -2,8 +2,7 @@ import random
 import json
 import time
 # Globals
-global inventory, playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict, rickFound, timeScale
-inventory = []
+global playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict, rickFound, timeScale
 playerSTARTHP = 50
 quests = []
 npcQuests = []
