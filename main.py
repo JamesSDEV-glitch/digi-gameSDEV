@@ -11,7 +11,6 @@ statusVisited = 0
 currentItem = None
 currentLocation = None
 rickFound = False
-timeScale = 20
 # PLAYER
 class Player:
     def __init__(self, name, hp, strength, intel, luck, skill, startHP, level, xp, armorClass, age, trait, gender, money, inventory):
