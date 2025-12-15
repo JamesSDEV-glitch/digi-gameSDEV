@@ -843,4 +843,4 @@ while run:
     elif choice == "rickCheck":
         print(rickFound)
     elif choice == "playerADDMONEY":
-        player.money += 500000000000000000000000000
+        player.money += 50000
