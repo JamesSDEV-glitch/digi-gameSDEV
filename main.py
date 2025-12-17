@@ -1,8 +1,9 @@
 import random
 import json
 import time
+import os
 # Globals
-global playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict, rickFound, timeScale
+global playerSTARTHP, quests, activeQuest, statusVisited, currentItem, currentLocation, playerDict, menuOptions
 playerSTARTHP = 50
 quests = []
 npcQuests = []
@@ -10,7 +11,7 @@ activeQuest = None
 statusVisited = 0
 currentItem = None
 currentLocation = None
-rickFound = False
+menuOptions = ["1. Move", "2. Show Inventory", "3. Use an Item", "4. Quests", "5. Janas. Almanac", "6. Scavenge", "7. Standalone Combat", "8. Meet Someone", "9. Factions","10. Save Game", "11. Shop","12. Quit"]
 # PLAYER
 class Player:
     def __init__(self, name, hp, strength, intel, luck, skill, startHP, level, xp, armorClass, age, trait, gender, money, inventory):
@@ -363,8 +364,7 @@ def createItems():
 def checkRickItem(itemFound):
     global rickFound
     if itemFound.name == rickEntrySlip.name:
-        print("Someone new has arrived...")
-        rickFound = True
+        menuOptions.append("13. Rick Crass")
     else:
         return
 # CREATE QUESTS
@@ -380,10 +380,10 @@ def createQuests():
     killFloatersQuest = quest("Kill Floaters", {"traget": "Floaters", "count": 5}, "Kill 5 Floaters.", "kill", 1500)
     killMutScorpionQuest = quest("Kill Mutated Scorpions.", {"target": "Mutated Scorpion", "count": 10}, "Kill a Mutated Scorpion nest.", "kill", 3000)
     gettingStartedQuest = quest("Getting started.", None, "Talk to some people.", None, None)
-    usArmyQONE = quest("US Army 1. Kill Rebels", {"target": "Rowdy Rebel", "count": 15}, "Kill rebels to aid the army.", "kill", 1500)
-    usArmyQTWO = quest("US Army 2. Find some Exo-Armor.", "X-T65 Exo-Armour", "Find a set of X-T65 Exo-Armour.", "find", 1700)
-    redRebelQONE = quest("Redtown Rebels 1. Kill U.S. Soldiers.", {"target": "U.S. Soldier", "count": 7}, "Kill U.S. Soldiers to aid the Redtown Rebels.", "kill", 1500)
-    redRebelQTWO = quest("Redtown Rebels 2. Find some combat armor.", "M-75 Combat Armour", "Find a set of M-75 Combat Armour.", "find", 1500)
+    usArmyQONE = quest("US Army 1.", {"target": "Rowdy Rebel", "count": 15}, "Kill rebels to aid the army.", "kill", 1500)
+    usArmyQTWO = quest("US Army 2.", "X-T65 Exo-Armour", "Find a set of X-T65 Exo-Armour.", "find", 1700)
+    redRebelQONE = quest("Redtown Rebels 1.", {"target": "U.S. Soldier", "count": 7}, "Kill U.S. Soldiers to aid the Redtown Rebels.", "kill", 1500)
+    redRebelQTWO = quest("Redtown Rebels 2.", "M-75 Combat Armour", "Find a set of M-75 Combat Armour.", "find", 1500)
     redTownMapQ = quest("Redtown location", "Redtown map", "Find the map of Redtown", "find", 700)
     quests = [gettingStartedQuest]
     npcQuests.extend([killMegaZombieQuest, findCokeQuest, killMutScorpionQuest, killFloatersQuest, killMUZombsQuest, findFFQuest, findCShotgunQuest, killRangersQuest, findNukeLauncherQuest])
@@ -423,16 +423,16 @@ def triggerEvent(event_type, data=None):
                 player.checkLevelUp()
 # FACTIONS
 class faction:
-    def __init__(self, name, desc, questline=None):
+    def __init__(self, name, desc, factAction=None):
         self.name = name
         self.desc = desc
-        self.questline = questline if questline else []
+        self.factAction = factAction
 def createFactions():
     global USArmyFaction, rebelFaction, factionList, krakerJakGang, ntmGang
-    ntmGang = faction("North Territory Montana Gang", "A gang of teens without a place in this turned upside-down world. Their main enemy are the KrakerJaks.", [])
-    krakerJakGang = faction("KrakerJaks", "A gang of kids, naming themselves after a baseball player.", [])
-    USArmyFaction = faction("U.S. Army", "The largest, most dangerous militia in the world.", [usArmyQONE, usArmyQTWO])
-    rebelRedFaction = faction("The Redtown Rebels", "The most well-known rebel group. Named after a pre-war baseball team, the Redtown Rickets.", [redRebelQONE, redRebelQTWO])
+    ntmGang = faction("North Territory Montana Gang", "A gang of teens without a place in this turned upside-down world. Their main enemy are the KrakerJaks.", factAction=None)
+    krakerJakGang = faction("KrakerJaks", "A gang of kids, naming themselves after a baseball player.", factAction=None)
+    USArmyFaction = faction("U.S. Army", "The largest, most dangerous militia in the world.", factAction=None)
+    rebelRedFaction = faction("The Redtown Rebels", "The most well-known rebel group. Named after a pre-war baseball team, the Redtown Rickets.", factAction=lambda: menuOptions.append("14. Janet Ajax"))
     factionList = [USArmyFaction, rebelRedFaction, ntmGang, krakerJakGang]
 def chooseFaction():
     print("FACTION SELECTION")
@@ -442,8 +442,8 @@ def chooseFaction():
         print(f"---- {fact.desc}\n")
     choice = int(input("FACTION NUM: ")) - 1
     chosenFaction = factionList[choice]
-    quests.extend(chosenFaction.questline)
-    print(f"Joined {chosenFaction.name}. New quests added.")
+    chosenFaction.factAction()
+    print(f"Joined {chosenFaction.name}.")
     return
 # CHOOSE QUEST
 def chooseQuest():
@@ -636,7 +636,7 @@ def loadGame():
     player.trait = p["trait"]
     player.money = p["money"]
     # LOAD INVENTORY
-    inventory.clear()
+    player.inventory.clear()
     for name in data["inventory"]:
         for item in itemList:
             if item.name == name:
@@ -739,7 +739,41 @@ def rickDialogue():
         ),
     }
     runDialogue(nodes, "start")
-
+rRLeaderJanetAjax = Player("Janet Ajax", 200, 7, 6, 9, 9, 200, 10, 0, 25, 45, None, "F", 0, [])
+def jAjaxDialogue():
+    nodes = {
+        "start": DialogueNode(
+            id="start",
+            text="Janet Ajax: What do you want?",
+            choices=[
+                DialogueChoice("What do I have to do?", nextNode="quest_one_d1"),
+                DialogueChoice("Bye.", nextNode="end")
+            ]
+        ),
+        "quest_one_d1": DialogueNode(
+            id="quest_one_d1",
+            text="Janet Ajax: I need some help. An U.S. Army troop has attacked our troop.\nWe need you to take them out.",
+            choices=[
+                DialogueChoice("I'll do it", nextNode="quest_one_dACCEPT", action=lambda: quests.append(redRebelQONE)),
+                DialogueChoice("Sorry, can't do it", nextNode=None)
+            ]
+        ),
+        "quest_one_dACCEPT": DialogueNode(
+            id="quest_one_dACCEPT",
+            text="Janet Ajax: Please hurry.",
+            choices=[
+                DialogueChoice("Anything else?", nextNode=None),
+                DialogueChoice("Alright.", nextNode="start")
+            ]
+        ),
+        "quest_one_dReject": DialogueNode()
+        "end": DialogueNode(
+            id="end",
+            text="You part ways.",
+            choices=[]
+        )
+    }
+    runDialogue(nodes,"start")
 # SETUP
 createItems()
 createQuests()
@@ -777,7 +811,8 @@ match choice:
 run = True
 while run:
     print("\n--- CRPG ---")
-    print(f" 1. Move\n 2. Show Inventory\n 3. Use an Item\n 4. Quests\n 5. Janas. Almanac\n 6. Scavenge\n 7. Standalone Combat\n 8. Meet Someone \n 9. Factions\n 10. Save Game\n 11. Rick Crass\n 12. Shop")
+    for opt in menuOptions:
+        print(opt)
     choice = input("> ")
     if choice == "1":
         move()
@@ -800,12 +835,13 @@ while run:
     elif choice == "10":
         saveGame()
     elif choice == "11":
-        if rickFound == True:
-            rickDialogue()
-        else:
-            print("Unavailable option.")
-    elif choice == "12":
         shopMenu()
+    elif choice == "12":
+        os.abort()
+    elif choice == "13":
+        rickDialogue()
+    elif choice == "14":
+        jAjaxDialogue()
     elif choice == "four leaf clover":
         player.luck += 500
         print("You feel lucky...")
