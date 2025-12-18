@@ -369,7 +369,7 @@ def checkRickItem(itemFound):
         return
 # CREATE QUESTS
 def createQuests():
-    global quests, npcQuests, usArmyQONE, usArmyQTWO, redRebelQONE, redRebelQTWO, redTownMapQ
+    global quests, npcQuests, usArmyQONE, usArmyQTWO, redRebelQONE, redRebelQTWO, redTownMapQ, rRebelQs, usArmyQs
     killMUZombsQuest = quest("Kill Mutated Zombies", {"target": "Mutated Zombie", "count": 3}, "Kill 3 Mutated Zombies.", "kill", 600)
     findFFQuest = quest("Find a Revolver", ".45 Revolver", "Find a .45 revolver.", "find", 600)
     findCShotgunQuest = quest("Find a Shotgun", "M-52 Combat Shotgun", "Find a Combat Shotgun.", "find", 600)
@@ -387,6 +387,8 @@ def createQuests():
     redTownMapQ = quest("Redtown location", "Redtown map", "Find the map of Redtown", "find", 700)
     quests = [gettingStartedQuest]
     npcQuests.extend([killMegaZombieQuest, findCokeQuest, killMutScorpionQuest, killFloatersQuest, killMUZombsQuest, findFFQuest, findCShotgunQuest, killRangersQuest, findNukeLauncherQuest])
+    rRebelQs = [redRebelQONE, redRebelQTWO]
+    usArmyQs = [usArmyQONE, usArmyQTWO]
     
 # CREATE LOCATIONS
 def createLocations():
@@ -600,7 +602,6 @@ def saveGame():
         "inventory": [item.name for item in player.inventory],
         "quests": [{"name": q.name, "completed": q.completed} for q in quests],
         "location": currentLocation.name,
-        "rick_active": rickFound
     }
 
     with open("save.json", "w") as f:
@@ -654,7 +655,6 @@ def loadGame():
         if loc.name == locName:
             currentLocation = loc
             break
-    rickFound = data["rick_active"]
     print("Game loaded.")
 #RICK COMPANION
 rickCompanion = Player("Rick Crass", 150, 7, 6, 8, 8, 150, 3, 0, 0, 32, None, "M", 0, [])
@@ -740,33 +740,47 @@ def rickDialogue():
     }
     runDialogue(nodes, "start")
 rRLeaderJanetAjax = Player("Janet Ajax", 200, 7, 6, 9, 9, 200, 10, 0, 25, 45, None, "F", 0, [])
+def redRebelQCHECKER():
+    for q in rRebelQs:
+        if q.completed == True:
+            continue
+        elif q.completed == False:
+            quests.append(q)
+            return
+
+
 def jAjaxDialogue():
     nodes = {
         "start": DialogueNode(
             id="start",
             text="Janet Ajax: What do you want?",
             choices=[
-                DialogueChoice("What do I have to do?", nextNode="quest_one_d1"),
+                DialogueChoice("What do I have to do?", nextNode="quest_d1"),
                 DialogueChoice("Bye.", nextNode="end")
             ]
         ),
-        "quest_one_d1": DialogueNode(
-            id="quest_one_d1",
-            text="Janet Ajax: I need some help. An U.S. Army troop has attacked our troop.\nWe need you to take them out.",
+        "quest_d1": DialogueNode(
+            id="quest_d1",
+            text="Janet Ajax: I need some help.",
             choices=[
-                DialogueChoice("I'll do it", nextNode="quest_one_dACCEPT", action=lambda: quests.append(redRebelQONE)),
+                DialogueChoice("I'll do it", nextNode="quest_dACCEPT", action=redRebelQCHECKER()),
                 DialogueChoice("Sorry, can't do it", nextNode=None)
             ]
         ),
-        "quest_one_dACCEPT": DialogueNode(
-            id="quest_one_dACCEPT",
+        "quest_dACCEPT": DialogueNode(
+            id="quest_dACCEPT",
             text="Janet Ajax: Please hurry.",
             choices=[
-                DialogueChoice("Anything else?", nextNode=None),
                 DialogueChoice("Alright.", nextNode="start")
             ]
         ),
-        "quest_one_dReject": DialogueNode()
+        "quest_dREJECT": DialogueNode(
+            id="quest_dREJECT",
+            text=f"Janet Ajax: Oh well. But the problem ain't gonna solve itself.",
+            choices=[
+                DialogueChoice("Alright", nextNode="start")
+            ]
+        ),
         "end": DialogueNode(
             id="end",
             text="You part ways.",
